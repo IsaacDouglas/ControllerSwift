@@ -137,7 +137,15 @@ public extension ControllerSwiftProtocol {
 
 public extension ControllerSwiftProtocol {
     
-    static func routes<T: PayloadProtocol>(payloadType: T.Type, useAuthentication: Bool = true) -> [Route] {
+    private static func reloadToken<T: PayloadProtocol>(request: HTTPRequest, payloadType: T.Type) throws -> String? {
+        let payload = try request.payload(on: payloadType)
+        if !payload.isAuthenticated {
+            throw CSError.genericError("Usuário não autenticado")
+        }
+        return try Token(payload: payload.reload()).token
+    }
+    
+    static func routes<T: PayloadProtocol>(useAuthenticationWith payloadType: T.Type? = nil) -> [Route] {
         var routes = [Route]()
         
         routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
@@ -151,13 +159,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .get, uri: "\(self.uri)/{id}", handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -186,13 +190,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .get, uri: self.uri, handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -222,13 +222,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .post, uri: self.uri, handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -262,13 +258,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .put, uri: "\(self.uri)/{id}", handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -302,13 +294,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .put, uri: self.uri, handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -345,13 +333,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .delete, uri: "\(self.uri)/{id}", handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
@@ -385,13 +369,9 @@ public extension ControllerSwiftProtocol {
         routes.append(Route(method: .delete, uri: self.uri, handler: { request, response in
             
             var token: String?
-            if useAuthentication {
+            if let payload = payloadType {
                 do {
-                    let payload = try request.payload(on: payloadType)
-                    if !payload.isAuthenticated {
-                        throw CSError.genericError("Usuário não autenticado")
-                    }
-                    token = try Token(payload: payload.reload()).token
+                    token = try self.reloadToken(request: request, payloadType: payload)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
