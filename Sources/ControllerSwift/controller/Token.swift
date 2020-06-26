@@ -14,12 +14,12 @@ public class Token: Codable {
     public static var secret: String = "secret"
     public static var algorithm: JWT.Alg = .hs256
     
-    public init(payload: Payload) throws {
+    public init<T: PayloadProtocol>(payload: T) throws {
         let jwt1 = try JWTCreator(payload: payload)
         self.token = try jwt1.sign(alg: Token.algorithm, key: Token.secret)
     }
     
-    public static func verify(token: String) throws -> Payload {
+    public static func verify<T: PayloadProtocol>(token: String, on type: T.Type) throws -> T {
         let bearer = token.replacingOccurrences(of: "Bearer ", with: "")
         
         guard let jwt = JWTVerifier(bearer) else {
@@ -27,6 +27,6 @@ public class Token: Codable {
         }
         
         try jwt.verify(algo: Token.algorithm, key: HMACKey(Token.secret))
-        return try jwt.decode(as: Payload.self)
+        return try jwt.decode(as: T.self)
     }
 }

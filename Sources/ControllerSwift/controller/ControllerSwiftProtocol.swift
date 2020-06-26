@@ -137,7 +137,7 @@ public extension ControllerSwiftProtocol {
 
 public extension ControllerSwiftProtocol {
     
-    static func routes(useAuthentication: Bool = true) -> [Route] {
+    static func routes<T: PayloadProtocol>(payloadType: T.Type, useAuthentication: Bool = true) -> [Route] {
         var routes = [Route]()
         
         routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
@@ -153,7 +153,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -188,7 +188,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -224,7 +224,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -264,7 +264,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -304,7 +304,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -347,7 +347,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
@@ -387,7 +387,7 @@ public extension ControllerSwiftProtocol {
             var token: String?
             if useAuthentication {
                 do {
-                    let payload = try request.payload()
+                    let payload = try request.payload(on: payloadType)
                     if !payload.isAuthenticated {
                         throw CSError.genericError("Usuário não autenticado")
                     }
