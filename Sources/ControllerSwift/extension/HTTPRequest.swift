@@ -8,7 +8,7 @@
 import Foundation
 import PerfectHTTP
 
-extension HTTPRequest {
+public extension HTTPRequest {
     func getBodyJSON<T: Decodable>(_ type: T.Type) -> T? {
         guard let body = postBodyString else { return nil }
         return body.decoder(type)

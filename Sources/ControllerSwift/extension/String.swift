@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension String {
+public extension String {
     func decoder<T: Decodable>(_ type: T.Type) -> T? {
         let data = Data(self.utf8)
         return try? JSONDecoder().decode(type, from: data)

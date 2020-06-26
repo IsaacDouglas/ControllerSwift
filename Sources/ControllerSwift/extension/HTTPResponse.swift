@@ -8,7 +8,7 @@
 import Foundation
 import PerfectHTTP
 
-extension HTTPResponse {
+public extension HTTPResponse {
     func sendJSON<T: Encodable>(_ json: T, status: HTTPResponseStatus = .ok) {
         do {
             try setBody(json: json)

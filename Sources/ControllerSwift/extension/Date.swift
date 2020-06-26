@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Date {
+public extension Date {
     static var timeInterval: CLong {
         return CLong(Date().timeIntervalSince1970.rounded())
     }

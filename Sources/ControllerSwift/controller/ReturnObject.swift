@@ -7,7 +7,7 @@
 
 import Foundation
 
-class ReturnObject<T: Codable>: Codable {
+public class ReturnObject<T: Codable>: Codable {
     public var message: String
     public var token: String?
     public var object: T?
