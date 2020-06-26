@@ -27,10 +27,10 @@ public protocol ControllerSwift where Self: Codable {
     
     static func create() throws
     
-    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort, range: Range, filter: [String: Any]) throws -> ([Self], Int)
+    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int)
     static func getOne(request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
     static func getMany(request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Self]
-    static func getManyReference(request: HTTPRequest, response: HTTPResponse, sort: Sort, range: Range, filter: [String: Any]) throws -> [Self]
+    static func getManyReference(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> [Self]
     
     static func create(request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
     
@@ -54,7 +54,7 @@ public extension ControllerSwift {
         try db.create(Self.self, policy: .dropTable)
     }
     
-    static func getManyReference(request: HTTPRequest, response: HTTPResponse, sort: Sort, range: Range, filter: [String : Any]) throws -> [Self] {
+    static func getManyReference(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> [Self] {
         return []
     }
     
@@ -119,13 +119,24 @@ public extension ControllerSwift {
         return records.map({ $0.id })
     }
     
-    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort, range: Range, filter: [String: Any]) throws -> ([Self], Int) {
+    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int) {
         let db = try getDB(reset: false)
         let count = try db.table(Self.self).count()
+        
+        var order: String?
+        if let sort = sort {
+            order = "ORDER BY \(sort.field) \(sort.order.rawValue)"
+        }
+        
+        var limitOffset: String?
+        if let range = range {
+            limitOffset = "LIMIT \(range.limit) OFFSET \(range.offset)"
+        }
+        
         let select = try db.sql("""
             SELECT * FROM \(Self.CRUDTableName)
-            ORDER BY \(sort.field) \(sort.order.rawValue)
-            LIMIT \(range.limit) OFFSET \(range.offset)
+            \(order ?? "")
+            \(limitOffset ?? "")
             """, Self.self)
         return (select, count)
     }
@@ -207,14 +218,9 @@ public extension ControllerSwift {
             
             switch actionReactAdmin {
             case .getList:
-                guard
-                    let sort = request.param(name: "sort")?.decoder(Sort.self),
-                    let range = request.param(name: "range")?.decoder(Range.self),
-                    let filter = request.param(name: "filter")?.convertToDictionary
-                    else {
-                        response.completed(status: .internalServerError)
-                        return
-                }
+                let sort = request.param(name: "sort")?.decoder(Sort.self)
+                let range = request.param(name: "range")?.decoder(Range.self)
+                let filter = request.param(name: "filter")?.convertToDictionary
                 
                 do {
                     let (retorno, total) = try self.getList(request: request, response: response, sort: sort, range: range, filter: filter)
