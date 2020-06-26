@@ -13,7 +13,7 @@ public func Log(_ format: String, function: String = #function, line: Int = #lin
     NSLog("function:\(function), line:\(line) <--> \(format)")
 }
 
-public enum ActionReactAdmin: String {
+public enum ControllerGet: String {
     case getList
     case getMany
     case getManyReference
@@ -133,7 +133,7 @@ public extension ControllerSwift {
 
 public extension ControllerSwift {
     
-    static func routesReactAdmin(useAuthentication: Bool = true) -> [Route] {
+    static func routes(useAuthentication: Bool = true) -> [Route] {
         var routes = [Route]()
         
         routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
@@ -199,7 +199,7 @@ public extension ControllerSwift {
             
             guard
                 let action = request.param(name: "action"),
-                let actionReactAdmin = ActionReactAdmin(rawValue: action)
+                let actionReactAdmin = ControllerGet(rawValue: action)
                 else {
                     response.completed(status: .internalServerError)
                     return
