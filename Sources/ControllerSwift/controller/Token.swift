@@ -23,7 +23,7 @@ public class Token: Codable {
         let bearer = token.replacingOccurrences(of: "Bearer ", with: "")
         
         guard let jwt = JWTVerifier(bearer) else {
-            throw PAError.genericError("Erro ao inicializar o JWTVerifier")
+            throw CSError.genericError("Erro ao inicializar o JWTVerifier")
         }
         
         try jwt.verify(algo: Token.algorithm, key: HMACKey(Token.secret))

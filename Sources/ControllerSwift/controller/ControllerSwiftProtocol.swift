@@ -155,7 +155,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -174,7 +174,7 @@ public extension ControllerSwiftProtocol {
                 let retorno = try self.getOne(request: request, response: response, id: id)
                 
                 try response
-                    .setBody(json: RetornoObject<Self>(message: "ok", token: token, object: retorno))
+                    .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: retorno))
                     .setHeader(.contentType, value: "application/json")
                     .completed()
             } catch {
@@ -190,7 +190,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -208,7 +208,7 @@ public extension ControllerSwiftProtocol {
                 let (retorno, total) = try self.getList(request: request, response: response, sort: sort, range: range, filter: filter)
                 
                 try response
-                    .setBody(json: RetornoObject<[Self]>(message: "ok", token: token, object: retorno))
+                    .setBody(json: ReturnObject<[Self]>(message: "ok", token: token, object: retorno))
                     .addHeader(.custom(name: "Access-Control-Expose-Headers"), value: "Content-Range")
                     .setHeader(.contentRange, value: "\(total)")
                     .setHeader(.contentType, value: "application/json")
@@ -226,7 +226,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -247,7 +247,7 @@ public extension ControllerSwiftProtocol {
                 if let object = object {
                     
                     try response
-                        .setBody(json: RetornoObject<Self>(message: "ok", token: token, object: object))
+                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
                         .completed(status: .ok)
                 } else {
@@ -266,7 +266,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -287,7 +287,7 @@ public extension ControllerSwiftProtocol {
                 if let object = object {
                     
                     try response
-                        .setBody(json: RetornoObject<Self>(message: "ok", token: token, object: object))
+                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
                         .completed(status: .created)
                 } else {
@@ -306,7 +306,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -330,7 +330,7 @@ public extension ControllerSwiftProtocol {
                 if let ids = ids {
                     
                     try response
-                        .setBody(json: RetornoObject<[Int]>(message: "ok", token: token, object: ids))
+                        .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
                         .setHeader(.contentType, value: "application/json")
                         .completed(status: .created)
                 } else {
@@ -349,7 +349,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -370,7 +370,7 @@ public extension ControllerSwiftProtocol {
                 if let object = object {
                     
                     try response
-                        .setBody(json: RetornoObject<Self>(message: "ok", token: token, object: object))
+                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
                         .completed(status: .ok)
                 } else {
@@ -389,7 +389,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     let payload = try request.payload()
                     if !payload.isAuthenticated {
-                        throw PAError.genericError("Usuário não autenticado")
+                        throw CSError.genericError("Usuário não autenticado")
                     }
                     token = try Token(payload: payload.reload()).token
                 } catch {
@@ -412,7 +412,7 @@ public extension ControllerSwiftProtocol {
                 if let ids = ids {
                     
                     try response
-                        .setBody(json: RetornoObject<[Int]>(message: "ok", token: token, object: ids))
+                        .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
                         .setHeader(.contentType, value: "application/json")
                         .completed(status: .created)
                 } else {

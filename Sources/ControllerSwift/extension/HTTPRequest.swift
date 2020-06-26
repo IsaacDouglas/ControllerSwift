@@ -16,7 +16,7 @@ extension HTTPRequest {
     
     func payload() throws -> Payload {
         guard let authorization = header(.authorization) else {
-            throw PAError.genericError("Não foi encontrado o \"header authorization\"")
+            throw CSError.genericError("Não foi encontrado o \"header authorization\"")
         }
         return try Token.verify(token: authorization)
     }
