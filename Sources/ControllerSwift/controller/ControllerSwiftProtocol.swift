@@ -96,30 +96,24 @@ public extension ControllerSwiftProtocol {
     static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int) {
         let count = try database.table(Self.self).count()
         
-        var `where`: String?
+        var list = [String]()
+        
         if let filter = filter {
             if let ids = filter["ids"] as? [Int] {
                 let joined = ids.map({ "\($0)" }).joined(separator: ", ")
-                `where` = "WHERE id IN (\(joined))"
+                list.append("WHERE id IN (\(joined))")
             }
         }
         
-        var order: String?
         if let sort = sort {
-            order = "ORDER BY \(sort.field) \(sort.order.rawValue)"
+            list.append("ORDER BY \(sort.field) \(sort.order.rawValue)")
         }
         
-        var limitOffset: String?
         if let range = range {
-            limitOffset = "LIMIT \(range.limit) OFFSET \(range.offset)"
+            list.append("LIMIT \(range.limit) OFFSET \(range.offset)")
         }
         
-        let select = try database.sql("""
-            SELECT * FROM \(Self.CRUDTableName)
-            \(`where` ?? "")
-            \(order ?? "")
-            \(limitOffset ?? "")
-            """, Self.self)
+        let select = try database.sql("SELECT * FROM \(Self.CRUDTableName) \(list.joined(separator: " "))", Self.self)
         return (select, count)
     }
 }
