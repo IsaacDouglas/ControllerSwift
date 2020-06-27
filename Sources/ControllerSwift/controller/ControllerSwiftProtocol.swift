@@ -18,21 +18,18 @@ public protocol ControllerSwiftProtocol where Self: Codable {
     
     static var uri: String { get }
     
-    static func createTable() throws
+    static func createTable<T: DatabaseConfigurationProtocol>(database: Database<T>) throws
     
-    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int)
-    static func getOne(request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
+    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int)
+    static func getOne<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
     
-    static func create(request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
+    static func create<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
     
-    static func update(request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
-    static func updateMany(request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]?
+    static func update<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
+    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]?
     
-    static func delete(request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
-    static func deleteMany(request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]?
-    
-    associatedtype T: DatabaseConfigurationProtocol
-    static func getDB(reset: Bool) throws -> Database<T>
+    static func delete<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
+    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]?
 }
 
 public extension ControllerSwiftProtocol {
@@ -40,17 +37,15 @@ public extension ControllerSwiftProtocol {
         return "/\(String(describing: self).lowercased())"
     }
     
-    static func createTable() throws {
-        let db = try getDB(reset: false)
-        try db.create(Self.self, policy: .dropTable)
+    static func createTable<T: DatabaseConfigurationProtocol>(database: Database<T>) throws {
+        try database.create(Self.self, policy: .dropTable)
     }
     
-    static func create(request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func create<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self? {
+        let table = database.table(Self.self)
         
         var item: Self?
-        try db.transaction {
+        try database.transaction {
             if record.id > 0 {
                 try table.insert(record)
             } else {
@@ -61,40 +56,35 @@ public extension ControllerSwiftProtocol {
         return item
     }
 
-    static func deleteMany(request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]? {
+        let table = database.table(Self.self)
         try table.where(\Self.id ~ filter.id).delete()
         return filter.id
     }
 
-    static func delete(request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func delete<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self? {
+        let table = database.table(Self.self)
         let query = table.where(\Self.id == id)
         let first = try query.first()
         try query.delete()
         return first
     }
 
-    static func getOne(request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func getOne<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self? {
+        let table = database.table(Self.self)
         return try table.where(\Self.id == id).first()
     }
     
-    static func update(request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func update<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self? {
+        let table = database.table(Self.self)
         try table.where(\Self.id == record.id).update(record)
         return record
     }
     
-    static func updateMany(request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]? {
-        let db = try getDB(reset: false)
-        let table = db.table(Self.self)
+    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]? {
+        let table = database.table(Self.self)
         
-        try db.transaction {
+        try database.transaction {
             for record in records {
                 let query = table.where(\Self.id == record.id)
                 try query.update(record)
@@ -103,9 +93,8 @@ public extension ControllerSwiftProtocol {
         return records.map({ $0.id })
     }
     
-    static func getList(request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int) {
-        let db = try getDB(reset: false)
-        let count = try db.table(Self.self).count()
+    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int) {
+        let count = try database.table(Self.self).count()
         
         var `where`: String?
         if let filter = filter {
@@ -125,7 +114,7 @@ public extension ControllerSwiftProtocol {
             limitOffset = "LIMIT \(range.limit) OFFSET \(range.offset)"
         }
         
-        let select = try db.sql("""
+        let select = try database.sql("""
             SELECT * FROM \(Self.CRUDTableName)
             \(`where` ?? "")
             \(order ?? "")
@@ -145,7 +134,7 @@ public extension ControllerSwiftProtocol {
         return try Token(payload: payload.reload()).token
     }
     
-    static func routes<T: PayloadProtocol>(useAuthenticationWith payloadType: T.Type? = nil) -> [Route] {
+    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: U.Type? = nil) -> [Route] {
         var routes = [Route]()
         
         routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
@@ -175,7 +164,7 @@ public extension ControllerSwiftProtocol {
                     return
                 }
                 
-                let retorno = try self.getOne(request: request, response: response, id: id)
+                let retorno = try self.getOne(database: database, request: request, response: response, id: id)
                 
                 try response
                     .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: retorno))
@@ -205,7 +194,7 @@ public extension ControllerSwiftProtocol {
             let filter = request.param(name: "filter")?.convertToDictionary
             
             do {
-                let (retorno, total) = try self.getList(request: request, response: response, sort: sort, range: range, filter: filter)
+                let (retorno, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
                 
                 try response
                     .setBody(json: ReturnObject<[Self]>(message: "ok", token: token, object: retorno))
@@ -238,7 +227,7 @@ public extension ControllerSwiftProtocol {
             }
             
             do {
-                let object = try self.create(request: request, response: response, record: record)
+                let object = try self.create(database: database, request: request, response: response, record: record)
                 
                 if let object = object {
                     
@@ -274,7 +263,7 @@ public extension ControllerSwiftProtocol {
             }
             
             do {
-                let object = try self.update(request: request, response: response, record: record)
+                let object = try self.update(database: database, request: request, response: response, record: record)
                 
                 if let object = object {
                     
@@ -313,7 +302,7 @@ public extension ControllerSwiftProtocol {
             }
             
             do {
-                let ids = try self.updateMany(request: request, response: response, filter: filter, records: records)
+                let ids = try self.updateMany(database: database, request: request, response: response, filter: filter, records: records)
                 
                 if let ids = ids {
                     
@@ -349,7 +338,7 @@ public extension ControllerSwiftProtocol {
             }
             
             do {
-                let object = try self.delete(request: request, response: response, id: id)
+                let object = try self.delete(database: database, request: request, response: response, id: id)
                 
                 if let object = object {
                     
@@ -387,7 +376,7 @@ public extension ControllerSwiftProtocol {
             }
             
             do {
-                let ids = try self.deleteMany(request: request, response: response, filter: filter)
+                let ids = try self.deleteMany(database: database, request: request, response: response, filter: filter)
                 
                 if let ids = ids {
                     
