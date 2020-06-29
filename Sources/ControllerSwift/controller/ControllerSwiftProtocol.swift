@@ -128,7 +128,7 @@ public extension ControllerSwiftProtocol {
         return try Token(payload: payload.reload()).token
     }
     
-    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: U.Type? = nil) -> [Route] {
+    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: (U.Type)? = nil) -> [Route] {
         var routes = [Route]()
         
         routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
@@ -224,7 +224,6 @@ public extension ControllerSwiftProtocol {
                 let object = try self.create(database: database, request: request, response: response, record: record)
                 
                 if let object = object {
-                    
                     try response
                         .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
@@ -260,7 +259,6 @@ public extension ControllerSwiftProtocol {
                 let object = try self.update(database: database, request: request, response: response, record: record)
                 
                 if let object = object {
-                    
                     try response
                         .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
@@ -299,7 +297,6 @@ public extension ControllerSwiftProtocol {
                 let ids = try self.updateMany(database: database, request: request, response: response, filter: filter, records: records)
                 
                 if let ids = ids {
-                    
                     try response
                         .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
                         .setHeader(.contentType, value: "application/json")
@@ -335,7 +332,6 @@ public extension ControllerSwiftProtocol {
                 let object = try self.delete(database: database, request: request, response: response, id: id)
                 
                 if let object = object {
-                    
                     try response
                         .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
@@ -373,7 +369,6 @@ public extension ControllerSwiftProtocol {
                 let ids = try self.deleteMany(database: database, request: request, response: response, filter: filter)
                 
                 if let ids = ids {
-                    
                     try response
                         .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
                         .setHeader(.contentType, value: "application/json")
