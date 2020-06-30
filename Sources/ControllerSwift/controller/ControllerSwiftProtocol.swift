@@ -120,268 +120,261 @@ public extension ControllerSwiftProtocol {
 
 public extension ControllerSwiftProtocol {
     
-    private static func reloadToken<T: PayloadProtocol>(request: HTTPRequest, payloadType: T.Type) throws -> String? {
-        let payload = try request.payload(on: payloadType)
-        if !payload.isAuthenticated {
-            throw CSError.genericError("Usuário não autenticado")
-        }
-        return try Token(payload: payload.reload()).token
+    static func routes<T: DatabaseConfigurationProtocol>(database: Database<T>) -> [Route] {
+        return self.routes(database: database, authenticate: nil)
     }
     
-    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: (U.Type)? = nil) -> [Route] {
-        var routes = [Route]()
+    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: U.Type) -> [Route] {
+        return self.routes(database: database, authenticate: { request in
+            let payload = try request.payload(on: payloadType)
+            if !payload.isAuthenticated {
+                throw CSError.genericError("Usuário não autenticado")
+            }
+            return try Token(payload: payload.reload()).token
+        })
+    }
+    
+    private static func routes<T: DatabaseConfigurationProtocol>(database: Database<T>, authenticate: ((HTTPRequest) throws -> String?)?) -> [Route] {
         
-        routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
-            response.completed(status: .ok)
-        }))
-        
-        routes.append(Route(method: .options, uri: "\(self.uri)/{id}", handler: { request, response in
-            response.completed(status: .ok)
-        }))
-        
-        routes.append(Route(method: .get, uri: "\(self.uri)/{id}", handler: { request, response in
+            var routes = [Route]()
             
-            var token: String?
-            if let payload = payloadType {
+            routes.append(Route(method: .options, uri: self.uri, handler: { request, response in
+                response.completed(status: .ok)
+            }))
+            
+            routes.append(Route(method: .options, uri: "\(self.uri)/{id}", handler: { request, response in
+                response.completed(status: .ok)
+            }))
+            
+            routes.append(Route(method: .get, uri: "\(self.uri)/{id}", handler: { request, response in
+                
+                var token: String?
                 do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
+                    token = try authenticate?(request)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
-            }
+                
+                do {
+                    guard let id = request.getId() else {
+                        response.completed(status: .internalServerError)
+                        return
+                    }
+                    
+                    let retorno = try self.getOne(database: database, request: request, response: response, id: id)
+                    
+                    try response
+                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: retorno))
+                        .setHeader(.contentType, value: "application/json")
+                        .completed()
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
             
-            do {
+            routes.append(Route(method: .get, uri: self.uri, handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .unauthorized)
+                    return
+                }
+                
+                let sort = request.param(name: "sort")?.decoder(Sort.self)
+                let range = request.param(name: "range")?.decoder(Range.self)
+                let filter = request.param(name: "filter")?.convertToDictionary
+                
+                do {
+                    let (retorno, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
+                    
+                    try response
+                        .setBody(json: ReturnObject<[Self]>(message: "ok", token: token, object: retorno))
+                        .addHeader(.custom(name: "Access-Control-Expose-Headers"), value: "Content-Range")
+                        .setHeader(.contentRange, value: "\(total)")
+                        .setHeader(.contentType, value: "application/json")
+                        .completed()
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
+            
+            routes.append(Route(method: .post, uri: self.uri, handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .unauthorized)
+                    return
+                }
+                
+                guard let record = request.getBodyJSON(Self.self) else {
+                    response.completed(status: .internalServerError)
+                    return
+                }
+                
+                do {
+                    let object = try self.create(database: database, request: request, response: response, record: record)
+                    
+                    if let object = object {
+                        try response
+                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setHeader(.contentType, value: "application/json")
+                            .completed(status: .ok)
+                    } else {
+                        response.completed(status: .internalServerError)
+                    }
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
+            
+            routes.append(Route(method: .put, uri: "\(self.uri)/{id}", handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .unauthorized)
+                    return
+                }
+                
+                guard let record = request.getBodyJSON(Self.self) else {
+                    response.completed(status: .internalServerError)
+                    return
+                }
+                
+                do {
+                    let object = try self.update(database: database, request: request, response: response, record: record)
+                    
+                    if let object = object {
+                        try response
+                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setHeader(.contentType, value: "application/json")
+                            .completed(status: .created)
+                    } else {
+                        response.completed(status: .internalServerError)
+                    }
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
+            
+            routes.append(Route(method: .put, uri: self.uri, handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .unauthorized)
+                    return
+                }
+                
+                guard
+                    let filter = request.param(name: "filter")?.decoder(FilterId.self),
+                    let records = request.getBodyJSON([Self].self)
+                    else {
+                        response.completed(status: .internalServerError)
+                        return
+                }
+                
+                do {
+                    let ids = try self.updateMany(database: database, request: request, response: response, filter: filter, records: records)
+                    
+                    if let ids = ids {
+                        try response
+                            .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
+                            .setHeader(.contentType, value: "application/json")
+                            .completed(status: .created)
+                    } else {
+                        response.completed(status: .internalServerError)
+                    }
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
+            
+            routes.append(Route(method: .delete, uri: "\(self.uri)/{id}", handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .unauthorized)
+                    return
+                }
+                
                 guard let id = request.getId() else {
                     response.completed(status: .internalServerError)
                     return
                 }
                 
-                let retorno = try self.getOne(database: database, request: request, response: response, id: id)
-                
-                try response
-                    .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: retorno))
-                    .setHeader(.contentType, value: "application/json")
-                    .completed()
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .get, uri: self.uri, handler: { request, response in
-            
-            var token: String?
-            if let payload = payloadType {
                 do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
+                    let object = try self.delete(database: database, request: request, response: response, id: id)
+                    
+                    if let object = object {
+                        try response
+                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setHeader(.contentType, value: "application/json")
+                            .completed(status: .ok)
+                    } else {
+                        response.completed(status: .internalServerError)
+                    }
+                } catch {
+                    Log("\(error)")
+                    response.completed(status: .internalServerError)
+                }
+            }))
+            
+            routes.append(Route(method: .delete, uri: self.uri, handler: { request, response in
+                
+                var token: String?
+                do {
+                    token = try authenticate?(request)
                 } catch {
                     Log("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
-            }
-            
-            let sort = request.param(name: "sort")?.decoder(Sort.self)
-            let range = request.param(name: "range")?.decoder(Range.self)
-            let filter = request.param(name: "filter")?.convertToDictionary
-            
-            do {
-                let (retorno, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
                 
-                try response
-                    .setBody(json: ReturnObject<[Self]>(message: "ok", token: token, object: retorno))
-                    .addHeader(.custom(name: "Access-Control-Expose-Headers"), value: "Content-Range")
-                    .setHeader(.contentRange, value: "\(total)")
-                    .setHeader(.contentType, value: "application/json")
-                    .completed()
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .post, uri: self.uri, handler: { request, response in
-            
-            var token: String?
-            if let payload = payloadType {
+                guard
+                    let filter = request.param(name: "filter")?.decoder(FilterId.self)
+                    else {
+                        response.completed(status: .internalServerError)
+                        return
+                }
+                
                 do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
+                    let ids = try self.deleteMany(database: database, request: request, response: response, filter: filter)
+                    
+                    if let ids = ids {
+                        try response
+                            .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
+                            .setHeader(.contentType, value: "application/json")
+                            .completed(status: .created)
+                    } else {
+                        response.completed(status: .internalServerError)
+                    }
                 } catch {
                     Log("\(error)")
-                    response.completed(status: .unauthorized)
-                    return
-                }
-            }
-            
-            guard let record = request.getBodyJSON(Self.self) else {
-                response.completed(status: .internalServerError)
-                return
-            }
-            
-            do {
-                let object = try self.create(database: database, request: request, response: response, record: record)
-                
-                if let object = object {
-                    try response
-                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
-                        .setHeader(.contentType, value: "application/json")
-                        .completed(status: .ok)
-                } else {
                     response.completed(status: .internalServerError)
                 }
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .put, uri: "\(self.uri)/{id}", handler: { request, response in
+            }))
             
-            var token: String?
-            if let payload = payloadType {
-                do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
-                } catch {
-                    Log("\(error)")
-                    response.completed(status: .unauthorized)
-                    return
-                }
-            }
-            
-            guard let record = request.getBodyJSON(Self.self) else {
-                response.completed(status: .internalServerError)
-                return
-            }
-            
-            do {
-                let object = try self.update(database: database, request: request, response: response, record: record)
-                
-                if let object = object {
-                    try response
-                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
-                        .setHeader(.contentType, value: "application/json")
-                        .completed(status: .created)
-                } else {
-                    response.completed(status: .internalServerError)
-                }
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .put, uri: self.uri, handler: { request, response in
-            
-            var token: String?
-            if let payload = payloadType {
-                do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
-                } catch {
-                    Log("\(error)")
-                    response.completed(status: .unauthorized)
-                    return
-                }
-            }
-            
-            guard
-                let filter = request.param(name: "filter")?.decoder(FilterId.self),
-                let records = request.getBodyJSON([Self].self)
-                else {
-                    response.completed(status: .internalServerError)
-                    return
-            }
-            
-            do {
-                let ids = try self.updateMany(database: database, request: request, response: response, filter: filter, records: records)
-                
-                if let ids = ids {
-                    try response
-                        .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
-                        .setHeader(.contentType, value: "application/json")
-                        .completed(status: .created)
-                } else {
-                    response.completed(status: .internalServerError)
-                }
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .delete, uri: "\(self.uri)/{id}", handler: { request, response in
-            
-            var token: String?
-            if let payload = payloadType {
-                do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
-                } catch {
-                    Log("\(error)")
-                    response.completed(status: .unauthorized)
-                    return
-                }
-            }
-            
-            guard let id = request.getId() else {
-                response.completed(status: .internalServerError)
-                return
-            }
-            
-            do {
-                let object = try self.delete(database: database, request: request, response: response, id: id)
-                
-                if let object = object {
-                    try response
-                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
-                        .setHeader(.contentType, value: "application/json")
-                        .completed(status: .ok)
-                } else {
-                    response.completed(status: .internalServerError)
-                }
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        routes.append(Route(method: .delete, uri: self.uri, handler: { request, response in
-            
-            var token: String?
-            if let payload = payloadType {
-                do {
-                    token = try self.reloadToken(request: request, payloadType: payload)
-                } catch {
-                    Log("\(error)")
-                    response.completed(status: .unauthorized)
-                    return
-                }
-            }
-            
-            guard
-                let filter = request.param(name: "filter")?.decoder(FilterId.self)
-                else {
-                    response.completed(status: .internalServerError)
-                    return
-            }
-            
-            do {
-                let ids = try self.deleteMany(database: database, request: request, response: response, filter: filter)
-                
-                if let ids = ids {
-                    try response
-                        .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
-                        .setHeader(.contentType, value: "application/json")
-                        .completed(status: .created)
-                } else {
-                    response.completed(status: .internalServerError)
-                }
-            } catch {
-                Log("\(error)")
-                response.completed(status: .internalServerError)
-            }
-        }))
-        
-        return routes
-    }
+            return routes
+        }
 }
