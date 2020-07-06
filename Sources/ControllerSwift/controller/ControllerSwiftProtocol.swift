@@ -163,10 +163,12 @@ public extension ControllerSwiftProtocol {
                         return
                     }
                     
-                    let retorno = try self.getOne(database: database, request: request, response: response, id: id)
+                    let object = try self.getOne(database: database, request: request, response: response, id: id)
+                    let success = (object != nil)
+                    let message = success ? nil : "null"
                     
                     try response
-                        .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: retorno))
+                        .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
                         .completed()
                 } catch {
@@ -191,10 +193,10 @@ public extension ControllerSwiftProtocol {
                 let filter = request.param(name: "filter")?.convertToDictionary
                 
                 do {
-                    let (retorno, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
+                    let (object, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
                     
                     try response
-                        .setBody(json: ReturnObject<[Self]>(message: "ok", token: token, object: retorno))
+                        .setBody(json: ReturnObject<[Self]>(success: true, message: nil, token: token, object: object))
                         .addHeader(.custom(name: "Access-Control-Expose-Headers"), value: "Content-Range")
                         .setHeader(.contentRange, value: "\(total)")
                         .setHeader(.contentType, value: "application/json")
@@ -223,10 +225,12 @@ public extension ControllerSwiftProtocol {
                 
                 do {
                     let object = try self.create(database: database, request: request, response: response, record: record)
+                    let success = (object != nil)
+                    let message = success ? nil : "null"
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .ok)
                     } else {
@@ -256,10 +260,12 @@ public extension ControllerSwiftProtocol {
                 
                 do {
                     let object = try self.update(database: database, request: request, response: response, record: record)
+                    let success = (object != nil)
+                    let message = success ? nil : "null"
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
@@ -295,7 +301,7 @@ public extension ControllerSwiftProtocol {
                     
                     if let ids = ids {
                         try response
-                            .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
+                            .setBody(json: ReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
@@ -325,10 +331,12 @@ public extension ControllerSwiftProtocol {
                 
                 do {
                     let object = try self.delete(database: database, request: request, response: response, id: id)
+                    let success = (object != nil)
+                    let message = success ? nil : "null"
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(message: "ok", token: token, object: object))
+                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .ok)
                     } else {
@@ -363,7 +371,7 @@ public extension ControllerSwiftProtocol {
                     
                     if let ids = ids {
                         try response
-                            .setBody(json: ReturnObject<[Int]>(message: "ok", token: token, object: ids))
+                            .setBody(json: ReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
