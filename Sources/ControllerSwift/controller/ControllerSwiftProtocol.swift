@@ -120,12 +120,12 @@ public extension ControllerSwiftProtocol {
 
 public extension ControllerSwiftProtocol {
     
-    static func routes<T: DatabaseConfigurationProtocol>(database: Database<T>) -> [Route] {
-        return self.routes(database: database, authenticate: nil)
+    static func routes<T: DatabaseProtocol>(databaseType: T.Type) -> [Route] {
+        return self.routes(databaseType: databaseType, authenticate: nil)
     }
     
-    static func routes<T: DatabaseConfigurationProtocol, U: PayloadProtocol>(database: Database<T>, useAuthenticationWith payloadType: U.Type) -> [Route] {
-        return self.routes(database: database, authenticate: { request in
+    static func routes<T: DatabaseProtocol, U: PayloadProtocol>(databaseType: T.Type, useAuthenticationWith payloadType: U.Type) -> [Route] {
+        return self.routes(databaseType: databaseType, authenticate: { request in
             let payload = try request.payload(on: payloadType)
             if !payload.isAuthenticated {
                 throw CSError.genericError("Usuário não autenticado")
@@ -134,7 +134,7 @@ public extension ControllerSwiftProtocol {
         })
     }
     
-    private static func routes<T: DatabaseConfigurationProtocol>(database: Database<T>, authenticate: ((HTTPRequest) throws -> String?)?) -> [Route] {
+    private static func routes<T: DatabaseProtocol>(databaseType: T.Type, authenticate: ((HTTPRequest) throws -> String?)?) -> [Route] {
         
             var routes = [Route]()
             
@@ -163,6 +163,7 @@ public extension ControllerSwiftProtocol {
                         return
                     }
                     
+                    let database = try databaseType.init().getDB(reset: false)
                     let object = try self.getOne(database: database, request: request, response: response, id: id)
                     let success = (object != nil)
                     let message = success ? nil : "null"
@@ -193,6 +194,7 @@ public extension ControllerSwiftProtocol {
                 let filter = request.param(name: "filter")?.convertToDictionary
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let (object, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
                     
                     try response
@@ -224,6 +226,7 @@ public extension ControllerSwiftProtocol {
                 }
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let object = try self.create(database: database, request: request, response: response, record: record)
                     let success = (object != nil)
                     let message = success ? nil : "null"
@@ -259,6 +262,7 @@ public extension ControllerSwiftProtocol {
                 }
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let object = try self.update(database: database, request: request, response: response, record: record)
                     let success = (object != nil)
                     let message = success ? nil : "null"
@@ -297,6 +301,7 @@ public extension ControllerSwiftProtocol {
                 }
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let ids = try self.updateMany(database: database, request: request, response: response, filter: filter, records: records)
                     
                     if let ids = ids {
@@ -330,6 +335,7 @@ public extension ControllerSwiftProtocol {
                 }
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let object = try self.delete(database: database, request: request, response: response, id: id)
                     let success = (object != nil)
                     let message = success ? nil : "null"
@@ -367,6 +373,7 @@ public extension ControllerSwiftProtocol {
                 }
                 
                 do {
+                    let database = try databaseType.init().getDB(reset: false)
                     let ids = try self.deleteMany(database: database, request: request, response: response, filter: filter)
                     
                     if let ids = ids {
