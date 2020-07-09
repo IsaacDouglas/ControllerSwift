@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Range: Codable {
+public struct CSRange: Codable {
     public let start: Int
     public let end: Int
     

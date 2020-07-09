@@ -7,14 +7,14 @@
 
 import Foundation
 
-public protocol PayloadProtocol: Codable {
+public protocol CSPayloadProtocol: Codable {
     var exp: CLong { get set }
     var iat: CLong { get set }
     
     func reload() -> Self
 }
 
-public extension PayloadProtocol {
+public extension CSPayloadProtocol {
     var isAuthenticated: Bool {
         let timeInterval = Date.timeInterval
         return (self.exp - timeInterval) >= 0

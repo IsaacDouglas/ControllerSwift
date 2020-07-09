@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class ReturnObject<T: Codable>: Codable {
+public class CSReturnObject<T: Codable>: Codable {
     public var success: Bool
     public var message: String?
     public var token: String?

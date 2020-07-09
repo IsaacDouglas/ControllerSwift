@@ -14,11 +14,11 @@ public extension HTTPRequest {
         return body.decoder(type)
     }
     
-    func payload<T: PayloadProtocol>(on type: T.Type) throws -> T {
+    func payload<T: CSPayloadProtocol>(on type: T.Type) throws -> T {
         guard let authorization = header(.authorization) else {
             throw CSError.genericError("Não foi encontrado o \"header authorization\"")
         }
-        return try Token.verify(token: authorization, on: type)
+        return try CSToken.verify(token: authorization, on: type)
     }
     
     func getId() -> Int? {

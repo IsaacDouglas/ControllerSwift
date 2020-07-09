@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum TimeIntervalType<T: Numeric> {
+public enum CSTimeIntervalType<T: Numeric> {
     case seconds(T)
     case minutes(T)
     case hour(T)

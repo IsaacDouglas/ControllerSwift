@@ -18,7 +18,7 @@ public extension String {
             do {
                 return try JSONSerialization.jsonObject(with: data, options: [.allowFragments]) as? [String: Any]
             } catch {
-                Log("\(error)")
+                CSLog("\(error)")
             }
         }
         return nil

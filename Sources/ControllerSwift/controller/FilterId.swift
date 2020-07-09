@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class FilterId: Codable {
+public class CSFilterId: Codable {
     public var id: [Int]
     
     public init(id: [Int]) {

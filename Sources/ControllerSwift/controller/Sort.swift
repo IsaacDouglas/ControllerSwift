@@ -7,12 +7,12 @@
 
 import Foundation
 
-public enum OrderType: String, Codable {
+public enum CSOrderType: String, Codable {
     case ASC
     case DESC
 }
 
-public struct Sort: Codable {
+public struct CSSort: Codable {
     public let field: String
-    public let order: OrderType
+    public let order: CSOrderType
 }

@@ -9,7 +9,7 @@ import Foundation
 import PerfectHTTP
 import PerfectCRUD
 
-public func Log(_ format: String, function: String = #function, line: Int = #line, file: String = #file) {
+public func CSLog(_ format: String, function: String = #function, line: Int = #line, file: String = #file) {
     NSLog("function:\(function), line:\(line) <--> \(format)")
 }
 
@@ -20,16 +20,16 @@ public protocol ControllerSwiftProtocol where Self: Codable {
     
     static func createTable<T: DatabaseConfigurationProtocol>(database: Database<T>) throws
     
-    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int)
+    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: CSSort?, range: CSRange?, filter: [String: Any]?) throws -> ([Self], Int)
     static func getOne<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
     
     static func create<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
     
     static func update<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, record: Self) throws -> Self?
-    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]?
+    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: CSFilterId, records: [Self]) throws -> [Int]?
     
     static func delete<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, id: Int) throws -> Self?
-    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]?
+    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: CSFilterId) throws -> [Int]?
 }
 
 public extension ControllerSwiftProtocol {
@@ -56,7 +56,7 @@ public extension ControllerSwiftProtocol {
         return item
     }
 
-    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId) throws -> [Int]? {
+    static func deleteMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: CSFilterId) throws -> [Int]? {
         let table = database.table(Self.self)
         try table.where(\Self.id ~ filter.id).delete()
         return filter.id
@@ -81,7 +81,7 @@ public extension ControllerSwiftProtocol {
         return record
     }
     
-    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: FilterId, records: [Self]) throws -> [Int]? {
+    static func updateMany<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, filter: CSFilterId, records: [Self]) throws -> [Int]? {
         let table = database.table(Self.self)
         
         try database.transaction {
@@ -93,7 +93,7 @@ public extension ControllerSwiftProtocol {
         return records.map({ $0.id })
     }
     
-    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: Sort?, range: Range?, filter: [String: Any]?) throws -> ([Self], Int) {
+    static func getList<T: DatabaseConfigurationProtocol>(database: Database<T>, request: HTTPRequest, response: HTTPResponse, sort: CSSort?, range: CSRange?, filter: [String: Any]?) throws -> ([Self], Int) {
         let count = try database.table(Self.self).count()
         
         var list = [String]()
@@ -120,21 +120,21 @@ public extension ControllerSwiftProtocol {
 
 public extension ControllerSwiftProtocol {
     
-    static func routes<T: DatabaseProtocol>(databaseType: T.Type) -> [Route] {
+    static func routes<T: CSDatabaseProtocol>(databaseType: T.Type) -> [Route] {
         return self.routes(databaseType: databaseType, authenticate: nil)
     }
     
-    static func routes<T: DatabaseProtocol, U: PayloadProtocol>(databaseType: T.Type, useAuthenticationWith payloadType: U.Type) -> [Route] {
+    static func routes<T: CSDatabaseProtocol, U: CSPayloadProtocol>(databaseType: T.Type, useAuthenticationWith payloadType: U.Type) -> [Route] {
         return self.routes(databaseType: databaseType, authenticate: { request in
             let payload = try request.payload(on: payloadType)
             if !payload.isAuthenticated {
                 throw CSError.genericError("Usuário não autenticado")
             }
-            return try Token(payload: payload.reload()).token
+            return try CSToken(payload: payload.reload()).token
         })
     }
     
-    private static func routes<T: DatabaseProtocol>(databaseType: T.Type, authenticate: ((HTTPRequest) throws -> String?)?) -> [Route] {
+    private static func routes<T: CSDatabaseProtocol>(databaseType: T.Type, authenticate: ((HTTPRequest) throws -> String?)?) -> [Route] {
         
             var routes = [Route]()
             
@@ -152,7 +152,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
@@ -169,11 +169,11 @@ public extension ControllerSwiftProtocol {
                     let message = success ? nil : "null"
                     
                     try response
-                        .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
+                        .setBody(json: CSReturnObject<Self>(success: success, message: message, token: token, object: object))
                         .setHeader(.contentType, value: "application/json")
                         .completed()
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -184,13 +184,13 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
                 
-                let sort = request.param(name: "sort")?.decoder(Sort.self)
-                let range = request.param(name: "range")?.decoder(Range.self)
+                let sort = request.param(name: "sort")?.decoder(CSSort.self)
+                let range = request.param(name: "range")?.decoder(CSRange.self)
                 let filter = request.param(name: "filter")?.convertToDictionary
                 
                 do {
@@ -198,13 +198,13 @@ public extension ControllerSwiftProtocol {
                     let (object, total) = try self.getList(database: database, request: request, response: response, sort: sort, range: range, filter: filter)
                     
                     try response
-                        .setBody(json: ReturnObject<[Self]>(success: true, message: nil, token: token, object: object))
+                        .setBody(json: CSReturnObject<[Self]>(success: true, message: nil, token: token, object: object))
                         .addHeader(.custom(name: "Access-Control-Expose-Headers"), value: "Content-Range")
                         .setHeader(.contentRange, value: "\(total)")
                         .setHeader(.contentType, value: "application/json")
                         .completed()
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -215,7 +215,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
@@ -233,14 +233,14 @@ public extension ControllerSwiftProtocol {
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
+                            .setBody(json: CSReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .ok)
                     } else {
                         response.completed(status: .internalServerError)
                     }
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -251,7 +251,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
@@ -269,14 +269,14 @@ public extension ControllerSwiftProtocol {
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
+                            .setBody(json: CSReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
                         response.completed(status: .internalServerError)
                     }
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -287,13 +287,13 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
                 
                 guard
-                    let filter = request.param(name: "filter")?.decoder(FilterId.self),
+                    let filter = request.param(name: "filter")?.decoder(CSFilterId.self),
                     let records = request.getBodyJSON([Self].self)
                     else {
                         response.completed(status: .internalServerError)
@@ -306,14 +306,14 @@ public extension ControllerSwiftProtocol {
                     
                     if let ids = ids {
                         try response
-                            .setBody(json: ReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
+                            .setBody(json: CSReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
                         response.completed(status: .internalServerError)
                     }
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -324,7 +324,7 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
@@ -342,14 +342,14 @@ public extension ControllerSwiftProtocol {
                     
                     if let object = object {
                         try response
-                            .setBody(json: ReturnObject<Self>(success: success, message: message, token: token, object: object))
+                            .setBody(json: CSReturnObject<Self>(success: success, message: message, token: token, object: object))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .ok)
                     } else {
                         response.completed(status: .internalServerError)
                     }
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))
@@ -360,13 +360,13 @@ public extension ControllerSwiftProtocol {
                 do {
                     token = try authenticate?(request)
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .unauthorized)
                     return
                 }
                 
                 guard
-                    let filter = request.param(name: "filter")?.decoder(FilterId.self)
+                    let filter = request.param(name: "filter")?.decoder(CSFilterId.self)
                     else {
                         response.completed(status: .internalServerError)
                         return
@@ -378,14 +378,14 @@ public extension ControllerSwiftProtocol {
                     
                     if let ids = ids {
                         try response
-                            .setBody(json: ReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
+                            .setBody(json: CSReturnObject<[Int]>(success: true, message: nil, token: token, object: ids))
                             .setHeader(.contentType, value: "application/json")
                             .completed(status: .created)
                     } else {
                         response.completed(status: .internalServerError)
                     }
                 } catch {
-                    Log("\(error)")
+                    CSLog("\(error)")
                     response.completed(status: .internalServerError)
                 }
             }))

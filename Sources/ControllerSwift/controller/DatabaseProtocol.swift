@@ -8,7 +8,7 @@
 import Foundation
 import PerfectCRUD
 
-public protocol DatabaseProtocol {
+public protocol CSDatabaseProtocol {
     associatedtype T: DatabaseConfigurationProtocol
     init()
     func getDB(reset: Bool) throws -> Database<T>
